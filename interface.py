@@ -1,5 +1,6 @@
 from pioneer_sdk import Camera, Pioneer
 import pygame
+import numpy as np
 import time
 
 key_w = pygame.image.load("images/w.png")
@@ -33,9 +34,8 @@ def _define_size(camera):
             pass
 
 
-def _interface(surf, height):
+def _interface(surf, height, font):
     surf.fill(BACKGROUND_COLOR)
-    font = pygame.font.SysFont("sans-serif", 22)
 
     info = font.render("W, A, S, D - horizontal flight controls", True, INFO_COLOR)
     surf.blit(info, (181, height-118))
@@ -81,9 +81,15 @@ class Interface:
         pygame.display.set_caption("Pioneer FPV")
         pygame.display.set_icon(pygame.image.load("images/icon.png"))
         self.width, self.height = _define_size(self.camera)
+        self.font = pygame.font.SysFont("sans-serif", 22)
         self.display = pygame.display.set_mode((self.width, self.height), 0)
         self.background = pygame.surface.Surface((self.width, self.height), 0, self.display)
-        _interface(self.background, self.height)
+        _interface(self.background, self.height, self.font)
+
+        self.battery_status = "Detecting..."
+        self._x = "0.0"
+        self._y = "0.0"
+        self._z = "0.0"
 
         self._main()
         pygame.quit()
@@ -123,18 +129,43 @@ class Interface:
         if keys[pygame.K_2]:
             self.display.blit(key_2, (48, self.height - 123))
             self.pioneer.disarm()
-        if keys[pygame.K_3]:
-            self.display.blit(key_3, (81, self.height - 123))
-            time.sleep(2)
-            self.pioneer.arm()
-            time.sleep(1)
-            self.pioneer.takeoff()
-            time.sleep(2)
+        # if keys[pygame.K_3]:
+        #     self.display.blit(key_3, (81, self.height - 123))
+        #     time.sleep(2)
+        #     self.pioneer.arm()
+        #     time.sleep(1)
+        #     self.pioneer.takeoff()
+        #     time.sleep(2)
         if keys[pygame.K_4]:
             self.display.blit(key_4, (114, self.height - 123))
             time.sleep(2)
             self.pioneer.land()
             time.sleep(2)
+
+    def _stats(self):
+        value = float(np.float32(self.pioneer.get_battery_status()).item())
+        if value > 0:
+            voltage = round(value, 2)
+            if voltage > 8.0:
+                color = (0, 255, 0)
+            elif voltage > 7.3:
+                color = (255, 255, 0)
+            else:
+                color = (255, 0, 0)
+            self.battery_status = self.font.render(str(voltage), True, color)
+        self.display.blit(self.battery_status, (self.width - 33, 5))
+
+        xyz = self.pioneer.get_optical_data()  # можно сделать реализацию под локус
+        if xyz is not None:
+            self._x = self.font.render("x: " + str(xyz['integrated_x']), True, (0, 0, 0))
+            self._y = self.font.render("y: " + str(xyz['integrated_y']), True, (0, 0, 0))
+            self._z = self.font.render("z: " + str(round(xyz['distance'], 3)), True, (0, 0, 0))
+        self.display.blit(self._x, (5, 5))
+        self.display.blit(self._y, (55, 5))
+        self.display.blit(self._z, (107, 5))
+
+        autopilot = self.font.render(str(self.pioneer.get_autopilot_state()), True, (0, 0, 0))
+        self.display.blit(autopilot, (170, 5))
 
     def _main(self):
         active = True
@@ -148,20 +179,22 @@ class Interface:
                 img = self.camera.get_cv_frame()[:, :, ::-1]
                 if img is not None:
                     img_surf = pygame.surfarray.make_surface(img)
-                    img_surf = pygame.transform.rotate(img_surf, -90)
+                    img_surf = pygame.transform.rotate(img_surf, 270)
+                    img_surf = pygame.transform.flip(img_surf, True, False)
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
                             active = False
                     self.display.blit(self.background, (0, 0))
                     self._controls()
                     self.display.blit(img_surf, (0, 0))
+                    self._stats()
                     pygame.display.update()
             except:
-                self.display.blit(pygame.image.load("images/fail.png"), (8, 8))
+                self.display.blit(pygame.image.load("images/fail.png"), (8, 30))
                 pygame.display.update()
             self.pioneer.send_rc_channels(channel_1=self.ch_1, channel_2=self.ch_2, channel_3=self.ch_3,
                                           channel_4=self.ch_4, channel_5=self.ch_5)
-            time.sleep(0.02)
+            # time.sleep(0.02)
 
 
 if __name__ == '__main__':
