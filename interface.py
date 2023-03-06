@@ -146,9 +146,9 @@ class Interface:
         value = float(np.float32(self.pioneer.get_battery_status()).item())
         if value > 0:
             voltage = round(value, 2)
-            if voltage > 8.0:
+            if voltage > 8.1:
                 color = (0, 255, 0)
-            elif voltage > 7.3:
+            elif voltage > 7.5:
                 color = (255, 255, 0)
             else:
                 color = (255, 0, 0)
@@ -185,8 +185,8 @@ class Interface:
                         if event.type == pygame.QUIT:
                             active = False
                     self.display.blit(self.background, (0, 0))
-                    self._controls()
                     self.display.blit(img_surf, (0, 0))
+                    self._controls()
                     self._stats()
                     pygame.display.update()
             except:
