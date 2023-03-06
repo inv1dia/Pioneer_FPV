@@ -79,19 +79,19 @@ class Interface:
                 img = self.camera.get_cv_frame()[:, :, ::-1]
                 if img is not None:
                     img_surf = pygame.surfarray.make_surface(img)
-                    img_surf = pygame.transform.rotate(img_surf, -90)
+                    img_surf = pygame.transform.rotate(img_surf, 270)
+                    img_surf = pygame.transform.flip(img_surf, True, False)
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
                             active = False
-                    self._controls()
                     self.display.blit(img_surf, (0, 0))
+                    self._controls()
                     pygame.display.update()
             except:
                 self.display.blit(pygame.image.load("images/fail.png"), (8, 8))
                 pygame.display.update()
             self.pioneer.send_rc_channels(channel_1=self.ch_1, channel_2=self.ch_2, channel_3=self.ch_3,
                                           channel_4=self.ch_4, channel_5=self.ch_5)
-            time.sleep(0.02)
 
 
 if __name__ == '__main__':
